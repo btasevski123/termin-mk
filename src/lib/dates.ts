@@ -37,6 +37,17 @@ export function upcomingDays(count: number, fromISO = todayInTimeZone()): string
   return Array.from({ length: count }, (_, index) => addDaysISO(fromISO, index));
 }
 
+export function eachDateISO(fromISO: string, toISO: string): string[] {
+  if (fromISO > toISO) return [];
+  const dates: string[] = [];
+  let current = fromISO;
+  while (current <= toISO) {
+    dates.push(current);
+    current = addDaysISO(current, 1);
+  }
+  return dates;
+}
+
 export function startOfWeekMonday(iso: string): string {
   const date = dateFromISO(iso);
   const day = date.getUTCDay();

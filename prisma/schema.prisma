@@ -22,6 +22,18 @@ enum BookingSource {
   PHONE
 }
 
+enum BookingCancelReason {
+  ADMIN
+  EVENT
+}
+
+enum EventKind {
+  HANDBALL
+  THEATER
+  TOURNAMENT
+  OTHER
+}
+
 model Customer {
   id        String    @id @default(cuid())
   name      String
@@ -45,8 +57,9 @@ model Hall {
   slotEndHour         Int       @default(23)
   slotDurationMinutes Int       @default(60)
   bookings            Booking[]
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  events              HallEvent[]
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 }
 
 /// One reservation of a generated hourly slot.
@@ -54,22 +67,49 @@ model Hall {
 /// is enforced in a server-action transaction, not here — a
 /// @@unique would block re-booking after CANCELLED.
 model Booking {
-  id         String        @id @default(cuid())
-  date       DateTime      @db.Date
-  startTime  String
-  endTime    String
-  status     BookingStatus @default(PENDING)
-  source     BookingSource @default(ONLINE)
-  notes      String?
-  customerId String
-  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  hallId     String
-  hall       Hall          @relation(fields: [hallId], references: [id], onDelete: Restrict)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id                 String               @id @default(cuid())
+  date               DateTime             @db.Date
+  startTime          String
+  endTime            String
+  status             BookingStatus        @default(PENDING)
+  source             BookingSource        @default(ONLINE)
+  notes              String?
+  cancelledAt        DateTime?
+  cancelReason       BookingCancelReason?
+  cancelledByEventId String?
+  cancelledByEvent   HallEvent?           @relation(fields: [cancelledByEventId], references: [id], onDelete: SetNull)
+  customerId         String
+  customer           Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  hallId             String
+  hall               Hall                 @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@index([hallId, date])
   @@index([status])
   @@index([customerId])
   @@index([date, startTime])
+  @@index([cancelledByEventId])
+}
+
+/// Occupies the hall so generated slots cannot be booked.
+/// Null start/end time = every slot on each covered date.
+model HallEvent {
+  id                String    @id @default(cuid())
+  title             String
+  kind              EventKind @default(OTHER)
+  /// Inclusive first date the hall is closed
+  startDate         DateTime  @db.Date
+  /// Inclusive last date (same as startDate for a single day)
+  endDate           DateTime  @db.Date
+  startTime         String?
+  endTime           String?
+  notes             String?
+  hallId            String
+  hall              Hall      @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  cancelledBookings Booking[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([hallId, startDate, endDate])
 }

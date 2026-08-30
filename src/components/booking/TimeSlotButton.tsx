@@ -4,14 +4,16 @@ const styles = {
   available:
     "border-available/40 bg-available/15 text-available hover:border-available hover:bg-available/25 active:scale-[0.98]",
   booked: "cursor-not-allowed border-white/10 bg-booked/10 text-booked/80 opacity-65",
+  blocked: "cursor-not-allowed border-blocked/30 bg-blocked/10 text-blocked",
   past: "cursor-not-allowed border-white/5 bg-white/5 text-white/35",
 } as const;
 
-const labels = {
-  available: "Слободно",
-  booked: "Зафатено",
-  past: "Поминато",
-} as const;
+function statusLabel(slot: TimeSlotView): string {
+  if (slot.status === "available") return "Слободно";
+  if (slot.status === "booked") return "Зафатено";
+  if (slot.status === "past") return "Поминато";
+  return slot.label ?? "Затворено";
+}
 
 type Props = {
   slot: TimeSlotView;
@@ -35,7 +37,7 @@ export function TimeSlotButton({ slot, selected, onSelect }: Props) {
         {slot.startTime}–{slot.endTime}
       </span>
       <span className="flex items-center gap-2">
-        <span className="text-sm font-medium">{labels[slot.status]}</span>
+        <span className="text-sm font-medium">{statusLabel(slot)}</span>
         {slot.status === "available" ? (
           <svg
             className="size-4 shrink-0 opacity-80"

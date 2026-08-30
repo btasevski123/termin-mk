@@ -2,9 +2,10 @@
 
 import { HALL_SLUG } from "@/lib/constants";
 import { dateFromISO } from "@/lib/dates";
+import { toHallEventPublic } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
 import { buildSlotViews } from "@/lib/slots";
-import type { ActionResult, HallPublic, TimeSlotView } from "@/types/booking";
+import type { ActionResult, HallEventPublic, HallPublic, TimeSlotView } from "@/types/booking";
 
 const hallSelect = {
   id: true,
@@ -27,22 +28,34 @@ export async function getHall(slug = HALL_SLUG): Promise<HallPublic | null> {
 export async function getSlotsForDate(
   hallId: string,
   dateISO: string,
-): Promise<ActionResult<TimeSlotView[]>> {
+): Promise<ActionResult<{ slots: TimeSlotView[]; events: HallEventPublic[] }>> {
+  const date = dateFromISO(dateISO);
   const hall = await prisma.hall.findUnique({ where: { id: hallId } });
   if (!hall) {
     return { ok: false, error: "Салата не е пронајдена." };
   }
 
-  const bookings = await prisma.booking.findMany({
-    where: {
-      hallId,
-      date: dateFromISO(dateISO),
-      status: { in: ["PENDING", "CONFIRMED"] },
-    },
-    select: { startTime: true },
-  });
+  const [bookings, events] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        hallId,
+        date,
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
+      select: { startTime: true },
+    }),
+    prisma.hallEvent.findMany({
+      where: {
+        hallId,
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+      orderBy: [{ startTime: "asc" }],
+    }),
+  ]);
 
   const booked = new Set(bookings.map((booking) => booking.startTime));
+  const publicEvents = events.map(toHallEventPublic);
   const slots = buildSlotViews(
     dateISO,
     {
@@ -51,7 +64,8 @@ export async function getSlotsForDate(
       durationMinutes: hall.slotDurationMinutes,
     },
     booked,
+    publicEvents,
   );
 
-  return { ok: true, data: slots };
+  return { ok: true, data: { slots, events: publicEvents } };
 }

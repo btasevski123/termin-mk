@@ -4,8 +4,9 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { getSlotsForDate } from "@/actions/slots";
 import { AdminIcon, iconButtonClass } from "@/components/icons";
+import { EVENT_KIND_LABELS } from "@/lib/constants";
 import { formatLongDate } from "@/lib/dates";
-import type { HallPublic, TimeSlotView } from "@/types/booking";
+import type { HallEventPublic, HallPublic, TimeSlotView } from "@/types/booking";
 import { BookingModal } from "./BookingModal";
 import { CalendarGrid } from "./CalendarGrid";
 import { TimeSlotButton } from "./TimeSlotButton";
@@ -14,20 +15,25 @@ type Props = {
   hall: HallPublic;
   initialDate: string;
   initialSlots: TimeSlotView[];
+  initialEvents: HallEventPublic[];
+  eventDates: string[];
 };
 
-export function PublicBooking({ hall, initialDate, initialSlots }: Props) {
+export function PublicBooking({ hall, initialDate, initialSlots, initialEvents, eventDates }: Props) {
   const [date, setDate] = useState(initialDate);
   const [slots, setSlots] = useState(initialSlots);
+  const [dayEvents, setDayEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<TimeSlotView | null>(null);
+  const markedDates = new Set(eventDates);
 
   const refreshSlots = useCallback(
     async (nextDate: string) => {
       setLoading(true);
       const result = await getSlotsForDate(hall.id, nextDate);
       if (result.ok) {
-        setSlots(result.data);
+        setSlots(result.data.slots);
+        setDayEvents(result.data.events);
       }
       setLoading(false);
     },
@@ -57,7 +63,7 @@ export function PublicBooking({ hall, initialDate, initialSlots }: Props) {
         </Link>
       </header>
 
-      <CalendarGrid selectedDate={date} onSelectDate={onSelectDate} />
+      <CalendarGrid selectedDate={date} onSelectDate={onSelectDate} eventDates={markedDates} />
 
       <div className="mt-6 flex items-center justify-between">
         <div>
@@ -66,15 +72,30 @@ export function PublicBooking({ hall, initialDate, initialSlots }: Props) {
             {loading ? "Се вчитува…" : `${availableCount} слободни термини`}
           </p>
         </div>
-        <div className="flex gap-3 text-xs text-white/60">
+        <div className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs text-white/60">
           <span className="flex items-center gap-1.5">
             <i className="size-2.5 rounded-full bg-available" /> Слободно
           </span>
           <span className="flex items-center gap-1.5">
             <i className="size-2.5 rounded-full bg-booked" /> Зафатено
           </span>
+          <span className="flex items-center gap-1.5">
+            <i className="size-2.5 rounded-full bg-blocked" /> Настан
+          </span>
         </div>
       </div>
+
+      {dayEvents.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-blocked/30 bg-blocked/10 px-4 py-3">
+          <p className="text-sm font-medium text-blocked">Салата е зафатена</p>
+          {dayEvents.map((event) => (
+            <p key={event.id} className="mt-1 text-sm text-white/80">
+              {EVENT_KIND_LABELS[event.kind]} — {event.title}
+              {event.startTime && event.endTime ? ` · ${event.startTime}–${event.endTime}` : ""}
+            </p>
+          ))}
+        </div>
+      ) : null}
 
       <div className={`mt-4 grid gap-2 ${loading ? "opacity-50" : ""}`}>
         {slots.map((slot) => (

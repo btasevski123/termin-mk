@@ -13,6 +13,13 @@ export const WEEKDAYS_FULL_MK = [
   "петок",
   "сабота",
 ] as const;
+export const EVENT_KIND_LABELS = {
+  HANDBALL: "Ракометен натпревар",
+  THEATER: "Претстава",
+  TOURNAMENT: "Турнир",
+  OTHER: "Друг настан",
+} as const;
+
 export const MONTHS_MK = [
   "јануари",
   "февруари",

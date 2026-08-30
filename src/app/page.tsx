@@ -1,6 +1,9 @@
+import { getHallEventsForRange } from "@/actions/events";
 import { getHall, getSlotsForDate } from "@/actions/slots";
 import { PublicBooking } from "@/components/booking/PublicBooking";
-import { todayInTimeZone } from "@/lib/dates";
+import { DAYS_AHEAD } from "@/lib/constants";
+import { addDaysISO, todayInTimeZone } from "@/lib/dates";
+import { expandEventDates } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +20,19 @@ export default async function HomePage() {
     );
   }
 
-  const slots = await getSlotsForDate(hall.id, date);
+  const [slots, upcoming] = await Promise.all([
+    getSlotsForDate(hall.id, date),
+    getHallEventsForRange(hall.id, date, addDaysISO(date, DAYS_AHEAD - 1)),
+  ]);
 
   return (
     <main className="min-h-dvh">
       <PublicBooking
         hall={hall}
         initialDate={date}
-        initialSlots={slots.ok ? slots.data : []}
+        initialSlots={slots.ok ? slots.data.slots : []}
+        initialEvents={slots.ok ? slots.data.events : []}
+        eventDates={[...expandEventDates(upcoming)]}
       />
     </main>
   );

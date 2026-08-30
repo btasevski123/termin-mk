@@ -1,7 +1,8 @@
 import { getWeekBookings } from "@/actions/bookings";
+import { getHallEventsForRange, getUpcomingHallEvents } from "@/actions/events";
 import { getHall } from "@/actions/slots";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
-import { todayInTimeZone } from "@/lib/dates";
+import { todayInTimeZone, weekDates } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +24,22 @@ export default async function AdminPage({
     );
   }
 
-  const { bookings } = await getWeekBookings(hall.id, date);
+  const days = weekDates(date);
+  const [{ bookings }, weekEvents, upcomingEvents] = await Promise.all([
+    getWeekBookings(hall.id, date),
+    getHallEventsForRange(hall.id, days[0], days[6]),
+    getUpcomingHallEvents(hall.id),
+  ]);
 
   return (
     <main className="min-h-dvh">
-      <AdminDashboard hall={hall} initialDate={date} bookings={bookings} />
+      <AdminDashboard
+        hall={hall}
+        initialDate={date}
+        bookings={bookings}
+        events={weekEvents}
+        upcomingEvents={upcomingEvents}
+      />
     </main>
   );
 }

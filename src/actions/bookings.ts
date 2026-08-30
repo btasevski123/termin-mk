@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { dateFromISO, isSlotInPast, todayInTimeZone, weekDates } from "@/lib/dates";
 import { normalizeMkPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
-import { generateTimeSlots } from "@/lib/slots";
+import { eventBlocksSlot, generateTimeSlots } from "@/lib/slots";
 import type { ActionResult, BookingWithCustomer, CreateBookingInput } from "@/types/booking";
 
 function revalidateBookingViews() {
@@ -67,6 +67,21 @@ export async function createBooking(
           throw new Error("SLOT_TAKEN");
         }
 
+        const events = await tx.hallEvent.findMany({
+          where: {
+            hallId: input.hallId,
+            startDate: { lte: dateFromISO(input.date) },
+            endDate: { gte: dateFromISO(input.date) },
+          },
+        });
+
+        const blocked = events.some((event) =>
+          eventBlocksSlot(event, { startTime: input.startTime, endTime: input.endTime }),
+        );
+        if (blocked) {
+          throw new Error("SLOT_BLOCKED");
+        }
+
         const customer = await tx.customer.upsert({
           where: { phone },
           update: { name },
@@ -96,6 +111,9 @@ export async function createBooking(
     if (error instanceof Error && error.message === "SLOT_TAKEN") {
       return { ok: false, error: "Терминот е веќе зафатен." };
     }
+    if (error instanceof Error && error.message === "SLOT_BLOCKED") {
+      return { ok: false, error: "Салата е затворена за овој термин поради настан." };
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
       return { ok: false, error: "Терминот е веќе зафатен." };
     }
@@ -114,7 +132,11 @@ export async function cancelBooking(bookingId: string): Promise<ActionResult> {
 
   await prisma.booking.update({
     where: { id: bookingId },
-    data: { status: "CANCELLED" },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      cancelReason: "ADMIN",
+    },
   });
 
   revalidateBookingViews();
@@ -133,9 +155,11 @@ export async function getBookingsForRange(
         gte: dateFromISO(fromISO),
         lte: dateFromISO(toISO),
       },
-      status: { in: ["PENDING", "CONFIRMED"] },
     },
-    include: { customer: true },
+    include: {
+      customer: true,
+      cancelledByEvent: { select: { id: true, title: true } },
+    },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 }

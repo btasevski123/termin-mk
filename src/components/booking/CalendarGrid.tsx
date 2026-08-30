@@ -6,9 +6,10 @@ import { formatDayLabel, todayInTimeZone, upcomingDays } from "@/lib/dates";
 type Props = {
   selectedDate: string;
   onSelectDate: (date: string) => void;
+  eventDates?: Set<string>;
 };
 
-export function CalendarGrid({ selectedDate, onSelectDate }: Props) {
+export function CalendarGrid({ selectedDate, onSelectDate, eventDates }: Props) {
   const today = todayInTimeZone();
   const days = upcomingDays(DAYS_AHEAD, today);
 
@@ -19,6 +20,7 @@ export function CalendarGrid({ selectedDate, onSelectDate }: Props) {
           const { weekday, day } = formatDayLabel(iso);
           const active = iso === selectedDate;
           const isToday = iso === today;
+          const hasEvent = eventDates?.has(iso) ?? false;
 
           return (
             <button
@@ -37,9 +39,13 @@ export function CalendarGrid({ selectedDate, onSelectDate }: Props) {
               <span className="mt-1 text-xl font-bold leading-none">{day}</span>
               <span
                 className={`mt-1.5 size-1.5 rounded-full ${
-                  isToday ? "bg-lime shadow-[0_0_6px_rgba(198,240,77,0.9)]" : "bg-transparent"
+                  hasEvent
+                    ? "bg-blocked shadow-[0_0_6px_rgba(245,158,11,0.9)]"
+                    : isToday
+                      ? "bg-lime shadow-[0_0_6px_rgba(198,240,77,0.9)]"
+                      : "bg-transparent"
                 }`}
-                aria-hidden={!isToday}
+                aria-hidden={!hasEvent && !isToday}
               />
             </button>
           );

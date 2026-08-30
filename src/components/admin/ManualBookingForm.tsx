@@ -2,13 +2,14 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createBooking } from "@/actions/bookings";
-import { generateTimeSlots } from "@/lib/slots";
-import type { HallPublic } from "@/types/booking";
+import { generateTimeSlots, eventBlocksSlot, eventCoversDate } from "@/lib/slots";
+import type { HallEventPublic, HallPublic } from "@/types/booking";
 
 type Props = {
   hall: HallPublic;
   date: string;
   startTime?: string;
+  events: HallEventPublic[];
   onCreated: () => void;
 };
 
@@ -42,8 +43,11 @@ async function submitManual(
   return { success: true };
 }
 
-export function ManualBookingForm({ hall, date, startTime, onCreated }: Props) {
+export function ManualBookingForm({ hall, date, startTime, events, onCreated }: Props) {
   const slots = generateTimeSlots(hall.slotStartHour, hall.slotEndHour, hall.slotDurationMinutes);
+  const openSlots = slots.filter(
+    (slot) => !events.some((event) => eventCoversDate(event, date) && eventBlocksSlot(event, slot)),
+  );
   const [state, formAction, pending] = useActionState(submitManual, {});
 
   const onCreatedRef = useRef(onCreated);
@@ -76,10 +80,11 @@ export function ManualBookingForm({ hall, date, startTime, onCreated }: Props) {
           <span className="mb-1 block text-xs text-white/55">Термин</span>
           <select
             name="startTime"
-            defaultValue={startTime ?? slots[0]?.startTime}
+            defaultValue={startTime && openSlots.some((slot) => slot.startTime === startTime) ? startTime : openSlots[0]?.startTime}
+            disabled={openSlots.length === 0}
             className="w-full rounded-xl border border-white/10 bg-background px-3 py-2 text-sm outline-none focus:border-lime"
           >
-            {slots.map((slot) => (
+            {openSlots.map((slot) => (
               <option key={slot.startTime} value={slot.startTime}>
                 {slot.startTime}–{slot.endTime}
               </option>
@@ -118,12 +123,16 @@ export function ManualBookingForm({ hall, date, startTime, onCreated }: Props) {
         />
       </label>
 
+      {openSlots.length === 0 ? (
+        <p className="text-sm text-blocked">Сите термини за овој ден се затворени поради настан.</p>
+      ) : null}
+
       {state.error ? <p className="text-sm text-booked">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-available">Резервацијата е додадена.</p> : null}
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || openSlots.length === 0}
         className="w-full rounded-xl bg-lime py-2.5 text-sm font-semibold text-pitch disabled:opacity-60"
       >
         {pending ? "Се зачувува…" : "Зачувај"}

@@ -7,6 +7,7 @@
   --lime: #c6f04d;
   --available: #22c55e;
   --booked: #f43f5e;
+  --blocked: #f59e0b;
 }
 
 @theme inline {
@@ -16,6 +17,7 @@
   --color-lime: var(--lime);
   --color-available: var(--available);
   --color-booked: var(--booked);
+  --color-blocked: var(--blocked);
   --font-sans: var(--font-sans);
 }
 

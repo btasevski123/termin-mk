@@ -7,6 +7,34 @@ export function formatClock(totalMinutes: number): string {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+export function clockToMinutes(clock: string): number {
+  const [hours, minutes] = clock.split(":").map(Number);
+  return hours * 60 + (minutes || 0);
+}
+
+export function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && aEnd > bStart;
+}
+
+type TimeWindow = { startTime: string | null; endTime: string | null };
+
+export function eventBlocksSlot(event: TimeWindow, slot: { startTime: string; endTime: string }): boolean {
+  if (!event.startTime || !event.endTime) return true;
+  return rangesOverlap(
+    clockToMinutes(slot.startTime),
+    clockToMinutes(slot.endTime),
+    clockToMinutes(event.startTime),
+    clockToMinutes(event.endTime),
+  );
+}
+
+export function eventCoversDate(
+  event: { startDate: string; endDate: string },
+  dateISO: string,
+): boolean {
+  return event.startDate <= dateISO && dateISO <= event.endDate;
+}
+
 export function generateTimeSlots(
   startHour: number,
   endHour: number,
@@ -29,14 +57,16 @@ export function buildSlotViews(
   dateISO: string,
   hours: { startHour: number; endHour: number; durationMinutes: number },
   bookedStartTimes: Set<string>,
+  blockingEvents: { title: string; startTime: string | null; endTime: string | null }[] = [],
 ): TimeSlotView[] {
   return generateTimeSlots(hours.startHour, hours.endHour, hours.durationMinutes).map((slot) => {
     const booked = bookedStartTimes.has(slot.startTime);
     const past = isSlotInPast(dateISO, slot.startTime);
+    const event = blockingEvents.find((item) => eventBlocksSlot(item, slot));
 
-    return {
-      ...slot,
-      status: booked ? "booked" : past ? "past" : "available",
-    };
+    if (booked) return { ...slot, status: "booked" as const };
+    if (event) return { ...slot, status: "blocked" as const, label: event.title };
+    if (past) return { ...slot, status: "past" as const };
+    return { ...slot, status: "available" as const };
   });
 }

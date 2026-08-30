@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { logoutAdmin } from "@/actions/admin";
 import { CalendarIcon, LogOutIcon, iconButtonClass } from "@/components/icons";
 import { addDaysISO, formatDayLabel, startOfWeekMonday, todayInTimeZone, weekDates } from "@/lib/dates";
-import { generateTimeSlots } from "@/lib/slots";
-import type { BookingWithCustomer, HallPublic } from "@/types/booking";
+import { eventBlocksSlot, eventCoversDate, generateTimeSlots } from "@/lib/slots";
+import type { BookingWithCustomer, HallEventPublic, HallPublic } from "@/types/booking";
 import { BookingsTable } from "./BookingsTable";
+import { HallEventsPanel } from "./HallEventsPanel";
 import { ManualBookingForm } from "./ManualBookingForm";
 
 type View = "day" | "week";
@@ -17,13 +18,15 @@ type Props = {
   hall: HallPublic;
   initialDate: string;
   bookings: BookingWithCustomer[];
+  events: HallEventPublic[];
+  upcomingEvents: HallEventPublic[];
 };
 
 function bookingDateISO(booking: BookingWithCustomer): string {
   return new Date(booking.date).toISOString().slice(0, 10);
 }
 
-export function AdminDashboard({ hall, initialDate, bookings }: Props) {
+export function AdminDashboard({ hall, initialDate, bookings, events, upcomingEvents }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [view, setView] = useState<View>("day");
@@ -140,17 +143,41 @@ export function AdminDashboard({ hall, initialDate, bookings }: Props) {
                 <tr key={slot.startTime} className="border-t border-white/5">
                   <td className="whitespace-nowrap px-2 py-2 text-white/60">{slot.startTime}</td>
                   {days.map((iso) => {
-                    const booking = bookings.find(
-                      (item) => bookingDateISO(item) === iso && item.startTime === slot.startTime,
+                    const activeBooking = bookings.find(
+                      (item) =>
+                        bookingDateISO(item) === iso &&
+                        item.startTime === slot.startTime &&
+                        item.status !== "CANCELLED",
+                    );
+                    const cancelledBooking = bookings.find(
+                      (item) =>
+                        bookingDateISO(item) === iso &&
+                        item.startTime === slot.startTime &&
+                        item.status === "CANCELLED",
+                    );
+                    const event = events.find(
+                      (item) => eventCoversDate(item, iso) && eventBlocksSlot(item, slot),
                     );
                     return (
                       <td key={`${iso}-${slot.startTime}`} className="px-1 py-1">
-                        {booking ? (
+                        {activeBooking ? (
                           <div className="rounded-lg bg-booked/20 px-1.5 py-1 text-booked">
-                            <p className="truncate font-medium">{booking.customer.name}</p>
+                            <p className="truncate font-medium">{activeBooking.customer.name}</p>
                             <p className="truncate opacity-80">
-                              {booking.source === "PHONE" ? "тел." : "онлајн"}
+                              {activeBooking.source === "PHONE" ? "тел." : "онлајн"}
                             </p>
+                          </div>
+                        ) : event ? (
+                          <div className="rounded-lg bg-blocked/20 px-1.5 py-1 text-blocked" title={event.title}>
+                            <p className="truncate font-medium">{event.title}</p>
+                            <p className="truncate opacity-80">
+                              {cancelledBooking ? `откажано: ${cancelledBooking.customer.name}` : "настан"}
+                            </p>
+                          </div>
+                        ) : cancelledBooking ? (
+                          <div className="rounded-lg bg-white/5 px-1.5 py-1 text-white/45">
+                            <p className="truncate font-medium line-through">{cancelledBooking.customer.name}</p>
+                            <p className="truncate opacity-80">откажано</p>
                           </div>
                         ) : (
                           <button
@@ -188,8 +215,13 @@ export function AdminDashboard({ hall, initialDate, bookings }: Props) {
           hall={hall}
           date={date}
           startTime={prefillsStart}
+          events={events}
           onCreated={refresh}
         />
+      </section>
+
+      <section className="mt-8">
+        <HallEventsPanel hall={hall} date={date} events={upcomingEvents} onChanged={refresh} />
       </section>
     </div>
   );

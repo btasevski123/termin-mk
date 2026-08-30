@@ -29,7 +29,7 @@ export function CalendarGrid({ selectedDate, onSelectDate, eventDates }: Props) 
               onClick={() => onSelectDate(iso)}
               className={`snap-start flex w-16 shrink-0 flex-col items-center rounded-2xl border px-2 py-3 transition ${
                 active
-                  ? "border-lime bg-lime/10 text-lime shadow-[0_0_14px_rgba(198,240,77,0.35)]"
+                  ? "border-lime bg-lime/10 text-lime"
                   : "border-white/10 bg-white/5 text-white hover:border-white/25"
               }`}
             >
@@ -39,11 +39,7 @@ export function CalendarGrid({ selectedDate, onSelectDate, eventDates }: Props) 
               <span className="mt-1 text-xl font-bold leading-none">{day}</span>
               <span
                 className={`mt-1.5 size-1.5 rounded-full ${
-                  hasEvent
-                    ? "bg-blocked shadow-[0_0_6px_rgba(245,158,11,0.9)]"
-                    : isToday
-                      ? "bg-lime shadow-[0_0_6px_rgba(198,240,77,0.9)]"
-                      : "bg-transparent"
+                  hasEvent ? "bg-blocked" : isToday ? "bg-lime" : "bg-transparent"
                 }`}
                 aria-hidden={!hasEvent && !isToday}
               />

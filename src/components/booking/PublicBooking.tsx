@@ -52,7 +52,7 @@ export function PublicBooking({ hall, initialDate, initialSlots, initialEvents, 
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-8">
       <header className="flex items-start justify-between pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
         <div>
-          <p className="text-xl font-extrabold uppercase tracking-[0.28em] text-lime drop-shadow-[0_0_12px_rgba(198,240,77,0.45)]">
+          <p className="text-xl font-extrabold uppercase tracking-[0.28em] text-lime">
             Termin
           </p>
           <h1 className="mt-1 text-2xl font-bold leading-tight">{hall.name}</h1>

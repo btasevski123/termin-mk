@@ -1,0 +1,75 @@
+// Termin MK — futsal pitch booking (Resen)
+// PostgreSQL + Prisma. Slot inventory is generated in app code
+// (hourly 17:00–23:00); Booking rows are the occupied slots.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum BookingSource {
+  ONLINE
+  PHONE
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String    @unique
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([name])
+}
+
+model Hall {
+  id                  String    @id @default(cuid())
+  name                String
+  location            String
+  slug                String    @unique
+  timezone            String    @default("Europe/Skopje")
+  /// First bookable hour (inclusive), e.g. 17 → 17:00
+  slotStartHour       Int       @default(17)
+  /// Hall closing hour (exclusive), e.g. 23 → last slot is 22:00–23:00
+  slotEndHour         Int       @default(23)
+  slotDurationMinutes Int       @default(60)
+  bookings            Booking[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+/// One reservation of a generated hourly slot.
+/// Active uniqueness (PENDING/CONFIRMED per hall+date+startTime)
+/// is enforced in a server-action transaction, not here — a
+/// @@unique would block re-booking after CANCELLED.
+model Booking {
+  id         String        @id @default(cuid())
+  date       DateTime      @db.Date
+  startTime  String
+  endTime    String
+  status     BookingStatus @default(PENDING)
+  source     BookingSource @default(ONLINE)
+  notes      String?
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  hallId     String
+  hall       Hall          @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([hallId, date])
+  @@index([status])
+  @@index([customerId])
+  @@index([date, startTime])
+}

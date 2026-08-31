@@ -13,7 +13,7 @@ type Props = {
   onCreated: () => void;
 };
 
-type FormState = { error?: string; success?: boolean };
+type FormState = { error?: string; success?: boolean; refresh?: boolean };
 
 async function submitManual(
   _prev: FormState,
@@ -37,7 +37,10 @@ async function submitManual(
   });
 
   if (!result.ok) {
-    return { error: result.error };
+    return {
+      error: result.error,
+      refresh: result.code === "SLOT_TAKEN" || result.code === "SLOT_BLOCKED",
+    };
   }
 
   return { success: true };
@@ -54,10 +57,10 @@ export function ManualBookingForm({ hall, date, startTime, events, onCreated }: 
   onCreatedRef.current = onCreated;
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success || state.refresh) {
       onCreatedRef.current();
     }
-  }, [state.success]);
+  }, [state.success, state.refresh]);
 
   return (
     <form action={formAction} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">

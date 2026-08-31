@@ -65,6 +65,7 @@ async function main() {
         status: "CONFIRMED",
         source: sample.source,
         notes: sample.source === "PHONE" ? "Резервација по телефон" : undefined,
+        activeSlotKey: `${hall.id}:${sample.date}:${sample.startTime}`,
       },
     });
   }

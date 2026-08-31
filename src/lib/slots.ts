@@ -1,6 +1,11 @@
 import { isSlotInPast } from "./dates";
 import type { TimeSlotView } from "@/types/booking";
 
+/** Unique occupancy token for an active (PENDING/CONFIRMED) hall slot. */
+export function activeBookingSlotKey(hallId: string, dateISO: string, startTime: string): string {
+  return `${hallId}:${dateISO}:${startTime}`;
+}
+
 export function formatClock(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;

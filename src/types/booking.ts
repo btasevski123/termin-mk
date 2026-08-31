@@ -69,7 +69,12 @@ export type BookingConflict = {
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
-  | { ok: false; error: string; conflicts?: BookingConflict[] };
+  | {
+      ok: false;
+      error: string;
+      conflicts?: BookingConflict[];
+      code?: "SLOT_TAKEN" | "SLOT_BLOCKED" | "UNAUTHORIZED";
+    };
 
 export type CreateBookingInput = {
   hallId: string;

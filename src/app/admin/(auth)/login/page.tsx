@@ -1,15 +1,13 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { loginAdmin } from "@/actions/admin";
-import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 
 export default async function AdminLoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const cookieStore = await cookies();
-  if (isValidAdminToken(cookieStore.get(ADMIN_COOKIE)?.value)) {
+  if (await isAdmin()) {
     redirect("/admin");
   }
 

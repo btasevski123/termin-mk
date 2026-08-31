@@ -63,9 +63,8 @@ model Hall {
 }
 
 /// One reservation of a generated hourly slot.
-/// Active uniqueness (PENDING/CONFIRMED per hall+date+startTime)
-/// is enforced in a server-action transaction, not here — a
-/// @@unique would block re-booking after CANCELLED.
+/// Double-booking is blocked by `activeSlotKey` (unique). Cancelled rows
+/// set it to null so PostgreSQL allows the same hall+date+startTime again.
 model Booking {
   id                 String               @id @default(cuid())
   date               DateTime             @db.Date
@@ -78,6 +77,8 @@ model Booking {
   cancelReason       BookingCancelReason?
   cancelledByEventId String?
   cancelledByEvent   HallEvent?           @relation(fields: [cancelledByEventId], references: [id], onDelete: SetNull)
+  /// `${hallId}:${YYYY-MM-DD}:${startTime}` while PENDING/CONFIRMED; null when CANCELLED.
+  activeSlotKey      String?              @unique
   customerId         String
   customer           Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
   hallId             String

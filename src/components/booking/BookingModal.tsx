@@ -13,7 +13,7 @@ type Props = {
   onBooked: () => void;
 };
 
-type FormState = { error?: string; success?: boolean };
+type FormState = { error?: string; success?: boolean; refresh?: boolean };
 
 async function submitBooking(
   _prev: FormState,
@@ -30,7 +30,10 @@ async function submitBooking(
   });
 
   if (!result.ok) {
-    return { error: result.error };
+    return {
+      error: result.error,
+      refresh: result.code === "SLOT_TAKEN" || result.code === "SLOT_BLOCKED",
+    };
   }
 
   return { success: true };
@@ -48,10 +51,10 @@ export function BookingModal({ hallId, date, slot, onClose, onBooked }: Props) {
   onBookedRef.current = onBooked;
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success || state.refresh) {
       onBookedRef.current();
     }
-  }, [state.success]);
+  }, [state.success, state.refresh]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

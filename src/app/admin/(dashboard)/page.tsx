@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getWeekBookings } from "@/actions/bookings";
 import { getHallEventsForRange, getUpcomingHallEvents } from "@/actions/events";
 import { getHall } from "@/actions/slots";
@@ -25,20 +26,24 @@ export default async function AdminPage({
   }
 
   const days = weekDates(date);
-  const [{ bookings }, weekEvents, upcomingEvents] = await Promise.all([
+  const [weekResult, weekEvents, upcomingResult] = await Promise.all([
     getWeekBookings(hall.id, date),
     getHallEventsForRange(hall.id, days[0], days[6]),
     getUpcomingHallEvents(hall.id),
   ]);
+
+  if (!weekResult.ok || !upcomingResult.ok) {
+    redirect("/admin/login");
+  }
 
   return (
     <main className="min-h-dvh">
       <AdminDashboard
         hall={hall}
         initialDate={date}
-        bookings={bookings}
+        bookings={weekResult.data.bookings}
         events={weekEvents}
-        upcomingEvents={upcomingEvents}
+        upcomingEvents={upcomingResult.data}
       />
     </main>
   );

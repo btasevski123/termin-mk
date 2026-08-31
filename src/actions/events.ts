@@ -1,8 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin";
+import { requireAdmin } from "@/lib/admin";
 import { dateFromISO, eachDateISO, todayInTimeZone, toISODate } from "@/lib/dates";
 import { toHallEventPublic } from "@/lib/events";
 import { prisma } from "@/lib/prisma";
@@ -24,11 +23,6 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function revalidateEventViews() {
   revalidatePath("/");
   revalidatePath("/admin");
-}
-
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  return isValidAdminToken(cookieStore.get(ADMIN_COOKIE)?.value);
 }
 
 class EventBookingConflictError extends Error {
@@ -85,7 +79,10 @@ export async function getHallEventsForRange(
   return events.map(toHallEventPublic);
 }
 
-export async function getUpcomingHallEvents(hallId: string): Promise<HallEventPublic[]> {
+export async function getUpcomingHallEvents(hallId: string): Promise<ActionResult<HallEventPublic[]>> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+
   const today = todayInTimeZone();
   const events = await prisma.hallEvent.findMany({
     where: {
@@ -94,13 +91,12 @@ export async function getUpcomingHallEvents(hallId: string): Promise<HallEventPu
     },
     orderBy: [{ startDate: "asc" }, { startTime: "asc" }],
   });
-  return events.map(toHallEventPublic);
+  return { ok: true, data: events.map(toHallEventPublic) };
 }
 
 export async function createHallEvent(input: CreateHallEventInput): Promise<ActionResult<CreateHallEventResult>> {
-  if (!(await isAdmin())) {
-    return { ok: false, error: "Немате пристап." };
-  }
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
 
   const title = input.title.trim();
   const notes = input.notes?.trim() || undefined;
@@ -195,6 +191,7 @@ export async function createHallEvent(input: CreateHallEventInput): Promise<Acti
             cancelledAt: new Date(),
             cancelReason: "EVENT",
             cancelledByEventId: created.id,
+            activeSlotKey: null,
           },
         });
       }
@@ -221,9 +218,8 @@ export async function createHallEvent(input: CreateHallEventInput): Promise<Acti
 }
 
 export async function deleteHallEvent(eventId: string): Promise<ActionResult> {
-  if (!(await isAdmin())) {
-    return { ok: false, error: "Немате пристап." };
-  }
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
 
   const event = await prisma.hallEvent.findUnique({ where: { id: eventId } });
   if (!event) {

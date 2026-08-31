@@ -1,4 +1,4 @@
-import { MONTHS_MK, TIMEZONE, WEEKDAYS_FULL_MK, WEEKDAYS_MK } from "./constants";
+import { DAYS_AHEAD, MONTHS_MK, TIMEZONE, WEEKDAYS_FULL_MK, WEEKDAYS_MK } from "./constants";
 
 export function todayInTimeZone(now = new Date(), timeZone = TIMEZONE): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -35,6 +35,15 @@ export function addDaysISO(iso: string, days: number): string {
 
 export function upcomingDays(count: number, fromISO = todayInTimeZone()): string[] {
   return Array.from({ length: count }, (_, index) => addDaysISO(fromISO, index));
+}
+
+/** Inclusive last calendar day guests may book (today + DAYS_AHEAD - 1). */
+export function lastBookableDateISO(fromISO = todayInTimeZone()): string {
+  return addDaysISO(fromISO, DAYS_AHEAD - 1);
+}
+
+export function isWithinBookingHorizon(dateISO: string, fromISO = todayInTimeZone()): boolean {
+  return dateISO >= fromISO && dateISO <= lastBookableDateISO(fromISO);
 }
 
 export function eachDateISO(fromISO: string, toISO: string): string[] {

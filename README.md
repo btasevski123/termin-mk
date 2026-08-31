@@ -9,6 +9,7 @@ PostgreSQL must be running. Default `.env` uses your local Homebrew Postgres:
 ```bash
 createdb termin_mk
 cp .env.example .env
+# Set ADMIN_PASSWORD in .env — required, there is no default.
 npm install
 npx prisma migrate deploy
 npx prisma db seed

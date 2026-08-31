@@ -1,14 +1,12 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 
 export default async function AdminDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  if (!isValidAdminToken(cookieStore.get(ADMIN_COOKIE)?.value)) {
+  if (!(await isAdmin())) {
     redirect("/admin/login");
   }
 
